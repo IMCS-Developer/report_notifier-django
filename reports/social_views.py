@@ -6,8 +6,9 @@ logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db import models, transaction
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+# Async-aware replacements for Django 3.2's csrf_exempt/require_GET/require_POST,
+# yang tidak menangani async def view dengan benar (lihat reports/decorators.py).
+from reports.decorators import csrf_exempt, require_GET, require_POST
 
 from reports.models import MasterManpower, DailyReportSummary, ReportComment, ReportReaction
 from reports.shared_helpers import _get_user_photo_url_async, _get_entity_reaction_data_sync
