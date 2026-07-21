@@ -149,10 +149,6 @@ INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN')
 # list/PDF data that only weighing has direct DB access to (WeighingTransaction).
 WEIGHING_BASE_URL = os.environ.get('WEIGHING_BASE_URL', 'http://localhost:8000')
 
-# Channel layer, needed so reports/internal_views.py can broadcast to the
-# "reports_feed" group after upserting DailyReportSummary. Same DEBUG-conditional
-# pattern as weight_scale-pyserial's config/settings.py. No websocket routing/consumers
-# are wired up on this project yet -- this only enables server-side group_send().
 if DEBUG:
     CHANNEL_LAYERS = {
         "default": {
