@@ -6,8 +6,6 @@ logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db import models, transaction
-# Async-aware replacements for Django 3.2's csrf_exempt/require_GET/require_POST,
-# yang tidak menangani async def view dengan benar (lihat reports/decorators.py).
 from reports.decorators import csrf_exempt, require_GET, require_POST
 
 from reports.models import MasterManpower, DailyReportSummary, ReportComment, ReportReaction
@@ -21,10 +19,6 @@ from asgiref.sync import async_to_sync, sync_to_async
 @csrf_exempt
 @require_GET
 async def get_report_reaction_status(request):
-    """
-    Mengembalikan status reaksi pengguna tertentu terhadap laporan.
-    Digunakan saat memuat halaman untuk menampilkan reaksi pengguna saat ini.
-    """
     report_id = request.GET.get('report_id')
     user_nik = request.GET.get('nik')
 
@@ -33,10 +27,7 @@ async def get_report_reaction_status(request):
         return JsonResponse({'status': 'error', 'message': 'report_id atau nik tidak lengkap'}, status=400)
 
     try:
-        # Mengambil objek laporan dan pengguna secara sinkron dalam satu panggilan asinkron jika memungkinkan
-        # Pastikan `select_related` digunakan jika ada relasi yang ingin diakses
         report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
-        # db_manpower_user = await sync_to_async(MasterManpower.objects.get)(nrp=user_nik) # Tidak diperlukan di sini, helper menangani user_nik
 
         results = await _get_entity_reaction_data_sync(report_summary, user_nik=user_nik, is_report=True)
 
@@ -69,12 +60,11 @@ async def get_report_reaction_users(request):
     Mengembalikan daftar pengguna yang memberikan reaksi tertentu pada laporan.
     """
     report_id = request.GET.get('report_id')
-    reaction_type = request.GET.get('reaction_type')  # misalnya, 'love', 'like', 'dislike'
+    reaction_type = request.GET.get('reaction_type')  # misalnya: 'love', 'like', 'dislike'
 
     if not report_id or not reaction_type:
         return JsonResponse({'status': 'error', 'message': 'report_id dan reaction_type wajib diisi'}, status=400)
 
-    # FIXED: Map incoming reaction_type to canonical emoji
     canonical_reaction_type = {
         'love': 'love', 'loved': 'love',
         'like': 'like', 'liked': 'like',
@@ -87,8 +77,6 @@ async def get_report_reaction_users(request):
     try:
         report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
 
-        # Filter reaksi untuk laporan ini dengan tipe reaksi yang diminta
-        # dan pastikan itu adalah reaksi laporan (comment__isnull=True)
         reactions_queryset = ReportReaction.objects.filter(
             report=report_summary,
             emoji=canonical_reaction_type,  # Use canonical type
@@ -160,21 +148,33 @@ async def post_comment(request):
             edited_at=None  # NEW: Set default for new comments
         )
 
-        # Perbaikan: Dapatkan jumlah komentar dan URL foto pengguna secara sinkron
-        # MODIFIED: Menggunakan _get_entity_reaction_data_sync untuk total komentar
         @sync_to_async
         def _get_comment_details_for_ws_sync(comment_obj, report_obj, request_obj):
             comment_user_name = comment_obj.user.nama if comment_obj.user.nama else comment_obj.user.nrp
             comment_user_photo_url = async_to_sync(_get_user_photo_url_async)(comment_obj.user, request_obj)  # Memanggil fungsi async di dalam sync
 
-            # Hitung total komentar untuk laporan induk (termasuk balasan)
             total_comments_count = report_obj.comments.count()
             return total_comments_count, comment_user_name, comment_user_photo_url
 
         total_comments_count, comment_user_name, comment_user_photo = await _get_comment_details_for_ws_sync(comment, report_summary, request)
 
-        # Dapatkan channel_layer di dalam konteks asinkron
         channel_layer = await sync_to_async(get_channel_layer)()
+
+        new_comment_data = {
+            "id": comment.id,
+            "report_id": report_id,
+            "user": comment_user_name,
+            "user_nik": comment.user.nrp,
+            "user_photo": comment_user_photo,
+            "message": comment.message,
+            "timestamp": comment.timestamp.isoformat(),
+            "parent_comment_id": comment.parent_comment.id if comment.parent_comment else None,
+            "is_edited": False,
+            "likes_count": 0,
+            "dislikes_count": 0,
+            "loves_count": 0,
+            "user_reaction": None,
+        }
 
         await channel_layer.group_send(
             "reports_feed",
@@ -183,26 +183,17 @@ async def post_comment(request):
                 "message": {
                     "encoded_key": report_id,
                     "comments_count": total_comments_count,
-                    "new_comment": {  # Kirim kembali detail komentar baru
-                        "id": comment.id,
-                        "report_id": report_id,
-                        "user": comment_user_name,
-                        "user_nik": comment.user.nrp,
-                        "user_photo": comment_user_photo,
-                        "message": comment.message,
-                        "timestamp": comment.timestamp.isoformat(),  # Kirim dalam format ISO
-                        "parent_comment_id": comment.parent_comment.id if comment.parent_comment else None,
-                        "is_edited": False,  # BARU
-                        "likes_count": 0,  # BARU: default untuk komentar baru
-                        "dislikes_count": 0,  # BARU: default untuk komentar baru
-                        "loves_count": 0,  # BARU: default untuk komentar baru
-                        "user_reaction": None,  # BARU: default untuk komentar baru
-                    }
+                    "new_comment": new_comment_data
                 }
             }
         )
 
-        return JsonResponse({'status': 'success', 'message': 'Komentar berhasil diposting', 'comment_id': comment.id})
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Komentar berhasil diposting',
+            'comment_id': comment.id,
+            'new_comment': new_comment_data,
+        })
 
     except json.JSONDecodeError:
         logger.error(f"post_comment: JSON tidak valid: {request.body.decode('utf-8')}", exc_info=True)
@@ -218,7 +209,6 @@ async def post_comment(request):
         return JsonResponse({'status': 'error', 'message': 'Terjadi kesalahan server internal.'}, status=500)
 
 
-# NEW API: Memperbarui komentar
 @csrf_exempt
 @require_POST
 async def update_comment(request):
@@ -251,13 +241,28 @@ async def update_comment(request):
         # Dapatkan jumlah terbaru untuk laporan induk
         report_summary = comment_to_update.report
         current_counts = await _get_entity_reaction_data_sync(report_summary, is_report=True)  # Comments count is included here
+        comment_reaction_data = await _get_entity_reaction_data_sync(comment_to_update, user_nik=user_nik, is_report=False)
 
         # Dapatkan channel_layer di dalam konteks asinkron
         channel_layer = await sync_to_async(get_channel_layer)()
 
+        updated_comment_data = {
+            "id": comment_to_update.id,
+            "report_id": report_summary.encoded_key,
+            "user": comment_to_update.user.nama if comment_to_update.user.nama else comment_to_update.user.nrp,
+            "user_nik": comment_to_update.user.nrp,
+            "user_photo": await _get_user_photo_url_async(comment_to_update.user, request),
+            "message": comment_to_update.message,
+            "timestamp": comment_to_update.timestamp.isoformat(),
+            "parent_comment_id": comment_to_update.parent_comment.id if comment_to_update.parent_comment else None,
+            "is_edited": comment_to_update.is_edited,
+            "likes_count": comment_reaction_data['likes_count'],
+            "dislikes_count": comment_reaction_data['dislikes_count'],
+            "loves_count": comment_reaction_data['loves_count'],
+            "user_reaction": comment_reaction_data['user_reaction'],
+        }
+
         # Kirim update WebSocket untuk menandakan komentar berubah
-        # Ini bisa menjadi update yang lebih spesifik untuk mengupdate komentar tunggal di frontend
-        # Atau mengirim kembali seluruh daftar komentar jika frontend hanya bisa refresh semua
         await channel_layer.group_send(
             "reports_feed",
             {
@@ -265,27 +270,17 @@ async def update_comment(request):
                 "message": {
                     "encoded_key": report_summary.encoded_key,
                     "comments_count": current_counts['comments_count'],
-                    "updated_comment": {  # Kirim detail komentar yang diperbarui
-                        "id": comment_to_update.id,
-                        "report_id": report_summary.encoded_key,
-                        "user": comment_to_update.user.nama if comment_to_update.user.nama else comment_to_update.user.nrp,
-                        "user_nik": comment_to_update.user.nrp,
-                        "user_photo": await _get_user_photo_url_async(comment_to_update.user, request),
-                        "message": comment_to_update.message,
-                        "timestamp": comment_to_update.timestamp.isoformat(),
-                        "parent_comment_id": comment_to_update.parent_comment.id if comment_to_update.parent_comment else None,
-                        "is_edited": comment_to_update.is_edited,
-                        # Reaksi di sini akan default 0, karena frontend akan mengambil ulang komentar
-                        "likes_count": 0,
-                        "dislikes_count": 0,
-                        "loves_count": 0,
-                        "user_reaction": None,
-                    }
+                    "updated_comment": updated_comment_data
                 }
             }
         )
 
-        return JsonResponse({'status': 'success', 'message': 'Komentar berhasil diperbarui', 'comment_id': comment_to_update.id})
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Komentar berhasil diperbarui',
+            'comment_id': comment_to_update.id,
+            'updated_comment': updated_comment_data,
+        })
 
     except json.JSONDecodeError:
         logger.error(f"update_comment: JSON tidak valid: {request.body.decode('utf-8')}", exc_info=True)
@@ -414,8 +409,6 @@ async def get_comment_reaction_users(request):
     try:
         comment_obj = await sync_to_async(ReportComment.objects.get)(id=comment_id)
 
-        # Filter reaksi untuk komentar ini dengan tipe reaksi yang diminta
-        # dan pastikan itu adalah reaksi komentar (report__isnull=True)
         reactions_queryset = ReportReaction.objects.filter(
             comment=comment_obj,
             emoji=canonical_reaction_type,  # Use canonical type
@@ -462,9 +455,6 @@ async def delete_comment(request):
             logger.warning(f"delete_comment: Data tidak lengkap. comment_id: {comment_id}, user_nik: {user_nik}")
             return JsonResponse({"status": "error", "message": "comment_id dan nik wajib diisi"}, status=400)
 
-        # Mengambil komentar dan laporan terkait dalam satu blok sync_to_async untuk efisiensi
-        # Hati-hati dengan .values(), jika Anda membutuhkan objek model lengkap setelahnya
-        # Jika Anda membutuhkan objek, lakukan get, lalu hapus
         try:
             comment_to_delete = await sync_to_async(
                 ReportComment.objects.select_related('report', 'user').get
@@ -482,12 +472,9 @@ async def delete_comment(request):
             logger.error(f"delete_comment: Gagal menghapus komentar {comment_id} meskipun ditemukan.")
             return JsonResponse({"status": "error", "message": "Gagal menghapus komentar atau komentar tidak ditemukan setelah validasi"}, status=404)
 
-        # Hitung ulang jumlah komentar untuk laporan terkait
-        # Ini akan menggunakan objek laporan yang sudah di-select_related jika ada
         report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_encoded_key)
         total_comments_count = await sync_to_async(report_summary.comments.count)()
 
-        # Dapatkan channel_layer di dalam konteks asinkron
         channel_layer = await sync_to_async(get_channel_layer)()
 
         # Kirim update via WebSocket
@@ -753,10 +740,12 @@ async def post_comment_reaction(request):  # Diganti nama dari toggle_comment_re
             {
                 "type": "comment_reaction_update",
                 "message": {
-                    "comment_id": comment_id,
-                    "reactions_counts": results['reactions_counts_dict'],
+                    "id": comment_id,
+                    "likes_count": results['reactions_counts_dict']['likes_count'],
+                    "dislikes_count": results['reactions_counts_dict']['dislikes_count'],
+                    "loves_count": results['reactions_counts_dict']['loves_count'],
                     "user_nik": user_nik,
-                    "user_reaction_emoji": results['user_reaction_emoji'],
+                    "user_reaction": results['user_reaction_emoji'],
                 }
             }
         )

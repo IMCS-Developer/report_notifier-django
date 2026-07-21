@@ -34,6 +34,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -74,6 +76,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
@@ -117,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Makassar'
 
 USE_I18N = True
 
@@ -141,6 +144,10 @@ FCM_PROJECT_ID = "vimcs-notifier-df95e"
 
 # Internal service-to-service auth (weighing -> report_notifier fire-and-forget HTTP calls)
 INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN')
+
+# Base URL of the weighing project, used by reports/proxy_views.py to fetch report
+# list/PDF data that only weighing has direct DB access to (WeighingTransaction).
+WEIGHING_BASE_URL = os.environ.get('WEIGHING_BASE_URL', 'http://localhost:8000')
 
 # Channel layer, needed so reports/internal_views.py can broadcast to the
 # "reports_feed" group after upserting DailyReportSummary. Same DEBUG-conditional

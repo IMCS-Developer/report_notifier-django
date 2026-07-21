@@ -7,9 +7,9 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
-from reports.models import DailyReportSummary, MasterManpower
+from reports.models import DailyReportSummary, FCMDevice, MasterManpower
 
 logger = logging.getLogger(__name__)
 
@@ -29,18 +29,6 @@ def require_internal_token(view_func):
 @require_POST
 @require_internal_token
 def upsert_daily_report_summary(request):
-    """
-    Menerima data agregat dari weighing (fire-and-forget HTTP POST, dipicu oleh
-    signal post_save WeighingTransaction) dan upsert ke DailyReportSummary lokal.
-    Mereplikasi logic get_or_create + backfill-if-empty dari signal asli
-    update_daily_report_summary di weighing/models.py, minus perhitungan
-    today_rom/today_jetty (sudah dihitung di sisi weighing dan dikirim di payload,
-    karena WeighingTransaction tidak ada lagi di database ini).
-
-    Tidak melakukan broadcast WebSocket -- broadcast tetap dilakukan dari
-    weighing/models.py (signal update_daily_report_summary) karena get_pdf_url()
-    hanya valid diisi lewat send_report/serve_pdf_report yang masih di weighing.
-    """
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -105,3 +93,12 @@ def upsert_daily_report_summary(request):
         report.save(update_fields=['today_rom', 'today_jetty', 'updated_at'])
 
     return JsonResponse({'success': True, 'created': created, 'id': report.id})
+
+
+@require_GET
+@require_internal_token
+def list_active_fcm_devices(request):
+    tokens = list(
+        FCMDevice.objects.filter(active=True).values_list('registration_id', flat=True)
+    )
+    return JsonResponse({'tokens': tokens, 'count': len(tokens)})

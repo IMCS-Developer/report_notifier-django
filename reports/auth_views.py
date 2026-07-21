@@ -10,11 +10,6 @@ from rest_framework.authtoken.models import Token
 @csrf_exempt
 @require_POST
 def login_api(request):
-    """
-    Login untuk app Flutter, berbasis NRP + password.
-    NRP diresolve lewat NRPAuthBackend (reports.auth_backends) ke MasterManpower.
-    Mengembalikan DRF auth token, bukan session cookie.
-    """
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:

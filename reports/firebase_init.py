@@ -13,8 +13,6 @@ def initialize_firebase():
     """
     if not firebase_admin._apps:
         try:
-            # Buat jalur absolut ke file kunci akun layanan
-            # Mengasumsikan 'firebase_service_account.json' ada di BASE_DIR
             service_account_path = getattr(settings, 'FIREBASE_SERVICE_ACCOUNT_KEY_PATH', None)
 
             if not service_account_path:

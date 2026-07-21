@@ -39,23 +39,22 @@ class MasterManpower(models.Model):
     user_account = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True,
                                         related_name='manpower_profile')
 
+    class Meta:
+        verbose_name = "Master Manpower"
+        verbose_name_plural = "Master Manpower"
+
 
 class FCMDevice(models.Model):
-    # Token pendaftaran Firebase Cloud Messaging untuk perangkat
     registration_id = models.CharField(max_length=255, unique=True, db_index=True)
-    # Menunjukkan apakah perangkat aktif dan harus menerima pemberitahuan.
     active = models.BooleanField(default=True)
-
-    # Timestamp saat perangkat didaftarkan atau diperbarui.
     date_created = models.DateTimeField(auto_now_add=True)
 
-    # Penautan ke NIK dari MasterManpower
     user_nik = models.ForeignKey(
         MasterManpower,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        to_field='nrp',  # asumsi 'nrp' adalah field NIK
+        to_field='nrp',
         related_name='fcm_devices'
     )
 
@@ -79,10 +78,8 @@ class DailyReportSummary(models.Model):
 
     report_date = models.DateField(db_index=True)
     shift = models.CharField(max_length=15, choices=SHIFT_CHOICES, db_index=True)
-    # delivery_shift mencerminkan shift saat laporan dipicu/dikirim
     delivery_shift = models.CharField(max_length=15, choices=SHIFT_CHOICES, null=True, blank=True,
                                       help_text="Shift saat laporan ini 'dikirim' atau saat transaksi yang memicu pembuatan laporan dicatat.")
-
     title = models.CharField(max_length=255, blank=True, null=True)
     notif_text = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now, null=True, blank=True)
@@ -152,18 +149,16 @@ class DailyReportSummary(models.Model):
 
 class ReportComment(models.Model):
     report = models.ForeignKey(DailyReportSummary, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
-
-    user = models.ForeignKey(
-        'MasterManpower',
-        on_delete=models.CASCADE,
-        to_field='nrp',
-        related_name='comments_made'
-    )
+    user = models.ForeignKey('MasterManpower', on_delete=models.CASCADE, to_field='nrp', related_name='comments_made')
     message = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
     parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     is_edited = models.BooleanField(default=False)
     edited_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Report Comment"
+        verbose_name_plural = "Report Comments"
 
     def tagged_users(self):
         import re

@@ -8,25 +8,13 @@ from reports.models import MasterManpower
 
 class NRPAuthBackend(BaseBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
-        """
-        Mengautentikasi pengguna berdasarkan NRP dari MasterManpower.
-        Secara otomatis membuat/mengaitkan user Django jika ditemukan di MasterManpower.
-        Username yang diharapkan adalah NRP.
-        """
         try:
             # Cari MasterManpower berdasarkan NRP (username yang dimasukkan)
             manpower = MasterManpower.objects.get(nrp=username)
 
-            # Jika MasterManpower ditemukan, cek apakah sudah ada user Django yang terkait
-            # MODIFIED: Menggunakan `related_name` `user_account` yang diharapkan ada di model MasterManpower
             if hasattr(manpower, 'user_account'):  # Periksa apakah objek terkait ada
                 user = manpower.user_account
             else:
-                # Jika belum ada user Django yang terkait, buat yang baru
-                # Set password sebagai 'UNUSABLE_PASSWORD' secara default
-                # User harus mengubah password mereka setelah login pertama
-                # Atau, Anda bisa memiliki alur "registrasi" terpisah
-                # NEW: Pastikan username unik untuk Django User
                 user, created = User.objects.get_or_create(username=manpower.nrp, defaults={'password': ''})
                 if created:
                     user.set_unusable_password()  # Set tidak dapat digunakan untuk pengguna yang baru dibuat tanpa password

@@ -1,18 +1,3 @@
-"""
-Drop-in async-aware replacements for django.views.decorators.http.require_GET/
-require_POST/require_http_methods and django.views.decorators.csrf.csrf_exempt.
-
-Root cause: Django 3.2's implementations of these decorators always define a
-synchronous `inner`/`wrapped_view` wrapper, even when the view they decorate is
-`async def`. Calling a sync wrapper that internally calls an async function
-without `await` just returns an un-awaited coroutine object, which Django's
-request handler then rejects with:
-    ValueError: The view ... didn't return an HttpResponse object.
-    It returned an unawaited coroutine instead.
-Django 4.1+ fixed this by branching on asyncio.iscoroutinefunction(func) and
-defining either a sync or an async wrapper accordingly -- this module
-reimplements that same pattern so it works under the pinned Django 3.2.25.
-"""
 import asyncio
 from functools import wraps
 
@@ -47,6 +32,7 @@ def require_http_methods(request_method_list):
                     return response
                 return func(request, *args, **kwargs)
         return inner
+
     return decorator
 
 
