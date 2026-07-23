@@ -11,7 +11,6 @@ wheels/
 
 # Environment & secrets
 .env
-.env.*
 *secret*.json
 serviceAccountKey.json
 
