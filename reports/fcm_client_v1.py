@@ -135,10 +135,12 @@ def send_fcm_notification_v1(tokens, title, data=None, android_channel_id=None, 
                     break  # Success, break from retry loop
                 else:
                     # Log error response from FCM
-                    print(f"❌ Failed to send to {token} (Attempt {attempt + 1}/{max_retries}): Status {response.status_code}, Response: {response.text}")
+                    print(
+                        f"❌ Failed to send to {token} (Attempt {attempt + 1}/{max_retries}): Status {response.status_code}, Response: {response.text}")
                     attempt += 1
                     if attempt >= max_retries:
-                        responses.append(FCMResponse(success=False, token=token, exception=response.text))  # Store error response text
+                        responses.append(FCMResponse(success=False, token=token,
+                                                     exception=response.text))  # Store error response text
             except requests.exceptions.RequestException as req_e:
                 print(f"❌ Network/Request error sending to {token} (Attempt {attempt + 1}/{max_retries}): {req_e}")
                 traceback.print_exc()

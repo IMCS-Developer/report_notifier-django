@@ -123,7 +123,8 @@ async def post_comment(request):
             f"DEBUG post_comment: Parsed data - report_id: {report_id}, user_nik: {user_nik}, message: {message}, parent_comment_id: {parent_comment_id}")
 
         if not report_id or not user_nik or not message:
-            logger.warning(f"post_comment: Data tidak lengkap. report_id: {report_id}, user_nik: {user_nik}, message: {message}")
+            logger.warning(
+                f"post_comment: Data tidak lengkap. report_id: {report_id}, user_nik: {user_nik}, message: {message}")
             return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
 
         # Dapatkan laporan dan pengguna dalam satu panggilan asinkron jika tidak ada parent_comment_id
@@ -151,12 +152,15 @@ async def post_comment(request):
         @sync_to_async
         def _get_comment_details_for_ws_sync(comment_obj, report_obj, request_obj):
             comment_user_name = comment_obj.user.nama if comment_obj.user.nama else comment_obj.user.nrp
-            comment_user_photo_url = async_to_sync(_get_user_photo_url_async)(comment_obj.user, request_obj)  # Memanggil fungsi async di dalam sync
+            comment_user_photo_url = async_to_sync(_get_user_photo_url_async)(comment_obj.user,
+                                                                              request_obj)  # Memanggil fungsi async di dalam sync
 
             total_comments_count = report_obj.comments.count()
             return total_comments_count, comment_user_name, comment_user_photo_url
 
-        total_comments_count, comment_user_name, comment_user_photo = await _get_comment_details_for_ws_sync(comment, report_summary, request)
+        total_comments_count, comment_user_name, comment_user_photo = await _get_comment_details_for_ws_sync(comment,
+                                                                                                             report_summary,
+                                                                                                             request)
 
         channel_layer = await sync_to_async(get_channel_layer)()
 
@@ -222,10 +226,12 @@ async def update_comment(request):
         user_nik = data.get('nik')  # FIXED: Mengambil 'nik' dari request
         new_message = data.get('message')
 
-        logger.info(f"DEBUG update_comment: Parsed data - comment_id: {comment_id}, user_nik: {user_nik}, new_message: {new_message}")
+        logger.info(
+            f"DEBUG update_comment: Parsed data - comment_id: {comment_id}, user_nik: {user_nik}, new_message: {new_message}")
 
         if not comment_id or not user_nik or not new_message:
-            logger.warning(f"update_comment: Data tidak lengkap. comment_id: {comment_id}, user_nik: {user_nik}, new_message: {new_message}")
+            logger.warning(
+                f"update_comment: Data tidak lengkap. comment_id: {comment_id}, user_nik: {user_nik}, new_message: {new_message}")
             return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
 
         comment_to_update = await sync_to_async(ReportComment.objects.select_related('report', 'user').get)(
@@ -240,8 +246,10 @@ async def update_comment(request):
 
         # Dapatkan jumlah terbaru untuk laporan induk
         report_summary = comment_to_update.report
-        current_counts = await _get_entity_reaction_data_sync(report_summary, is_report=True)  # Comments count is included here
-        comment_reaction_data = await _get_entity_reaction_data_sync(comment_to_update, user_nik=user_nik, is_report=False)
+        current_counts = await _get_entity_reaction_data_sync(report_summary,
+                                                              is_report=True)  # Comments count is included here
+        comment_reaction_data = await _get_entity_reaction_data_sync(comment_to_update, user_nik=user_nik,
+                                                                     is_report=False)
 
         # Dapatkan channel_layer di dalam konteks asinkron
         channel_layer = await sync_to_async(get_channel_layer)()
@@ -286,7 +294,8 @@ async def update_comment(request):
         logger.error(f"update_comment: JSON tidak valid: {request.body.decode('utf-8')}", exc_info=True)
         return JsonResponse({'status': 'error', 'message': 'JSON tidak valid'}, status=400)
     except ReportComment.DoesNotExist:
-        logger.error(f"update_comment: Komentar {comment_id} tidak ditemukan atau bukan milik pengguna {user_nik}.", exc_info=True)
+        logger.error(f"update_comment: Komentar {comment_id} tidak ditemukan atau bukan milik pengguna {user_nik}.",
+                     exc_info=True)
         return JsonResponse({'status': 'error', 'message': 'Tidak ditemukan atau bukan pemilik komentar'}, status=403)
     except MasterManpower.DoesNotExist:
         logger.error(f"update_comment: Pengguna dengan NIK={user_nik} tidak ditemukan.", exc_info=True)
@@ -321,8 +330,10 @@ async def get_comments(request):
             models.Prefetch('replies', queryset=ReportComment.objects.select_related('user').order_by('timestamp')),
             # Urutkan balasan dari yang terlama ke terbaru
             # NEW: Prefetch reactions for comments and their replies
-            models.Prefetch('reactions', queryset=ReportReaction.objects.select_related('user').filter(report__isnull=True)),
-            models.Prefetch('replies__reactions', queryset=ReportReaction.objects.select_related('user').filter(report__isnull=True))
+            models.Prefetch('reactions',
+                            queryset=ReportReaction.objects.select_related('user').filter(report__isnull=True)),
+            models.Prefetch('replies__reactions',
+                            queryset=ReportReaction.objects.select_related('user').filter(report__isnull=True))
         ).order_by('-timestamp')  # Urutkan komentar utama: terbaru di atas
 
         comments = await database_sync_to_async(list)(comments_queryset)  # Sudah benar
@@ -460,8 +471,10 @@ async def delete_comment(request):
                 ReportComment.objects.select_related('report', 'user').get
             )(id=comment_id, user__nrp=user_nik)
         except ReportComment.DoesNotExist:
-            logger.warning(f"delete_comment: Komentar {comment_id} tidak ditemukan atau bukan milik pengguna {user_nik}.")
-            return JsonResponse({"status": "error", "message": "Tidak ditemukan atau bukan pemilik komentar"}, status=403)
+            logger.warning(
+                f"delete_comment: Komentar {comment_id} tidak ditemukan atau bukan milik pengguna {user_nik}.")
+            return JsonResponse({"status": "error", "message": "Tidak ditemukan atau bukan pemilik komentar"},
+                                status=403)
 
         report_encoded_key = comment_to_delete.report.encoded_key
 
@@ -470,7 +483,9 @@ async def delete_comment(request):
 
         if deleted_count == 0:
             logger.error(f"delete_comment: Gagal menghapus komentar {comment_id} meskipun ditemukan.")
-            return JsonResponse({"status": "error", "message": "Gagal menghapus komentar atau komentar tidak ditemukan setelah validasi"}, status=404)
+            return JsonResponse({"status": "error",
+                                 "message": "Gagal menghapus komentar atau komentar tidak ditemukan setelah validasi"},
+                                status=404)
 
         report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_encoded_key)
         total_comments_count = await sync_to_async(report_summary.comments.count)()
@@ -496,7 +511,9 @@ async def delete_comment(request):
         logger.error(f"delete_comment: JSON tidak valid: {request.body.decode('utf-8')}", exc_info=True)
         return JsonResponse({"status": "error", "message": "JSON tidak valid"}, status=400)
     except DailyReportSummary.DoesNotExist:
-        logger.error(f"delete_comment: Laporan terkait komentar {comment_id} (key: {report_encoded_key}) tidak ditemukan.", exc_info=True)
+        logger.error(
+            f"delete_comment: Laporan terkait komentar {comment_id} (key: {report_encoded_key}) tidak ditemukan.",
+            exc_info=True)
         return JsonResponse({"status": "error", "message": "Laporan terkait komentar tidak ditemukan"}, status=404)
     except Exception as e:
         logger.error(f"ERROR dalam delete_comment: {e}", exc_info=True)
@@ -516,10 +533,12 @@ async def post_report_reaction(request):
         user_nik = data.get('nik')
         action = data.get('action')  # 'love', 'like', 'dislike', 'unlove', 'unlike', 'undislike'
 
-        logger.info(f"DEBUG post_report_reaction: Data yang diurai - report_id='{report_id}', user_nik='{user_nik}', action='{action}'")
+        logger.info(
+            f"DEBUG post_report_reaction: Data yang diurai - report_id='{report_id}', user_nik='{user_nik}', action='{action}'")
 
         if not report_id or not user_nik or not action:
-            logger.warning(f"post_report_reaction: Data tidak lengkap. report_id: {report_id}, user_nik: {user_nik}, action: {action}")
+            logger.warning(
+                f"post_report_reaction: Data tidak lengkap. report_id: {report_id}, user_nik: {user_nik}, action: {action}")
             return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
 
         # Dapatkan laporan dan pengguna
@@ -583,7 +602,8 @@ async def post_report_reaction(request):
                         user_reaction_status_for_response = None
 
                 # Hitung ulang semua jumlah reaksi dan komentar
-                reaction_data = async_to_sync(_get_entity_reaction_data_sync)(report_summary, user_nik=user_nik, is_report=True)
+                reaction_data = async_to_sync(_get_entity_reaction_data_sync)(report_summary, user_nik=user_nik,
+                                                                              is_report=True)
 
                 return {
                     'message': message,
@@ -649,10 +669,12 @@ async def post_comment_reaction(request):  # Diganti nama dari toggle_comment_re
         user_nik = data.get('nik')
         emoji_action = data.get('action')  # 'love', 'like', 'dislike', 'unlove', 'unlike', 'undislike'
 
-        logger.info(f"DEBUG post_comment_reaction: Data yang diurai - comment_id='{comment_id}', user_nik='{user_nik}', emoji_action='{emoji_action}'")
+        logger.info(
+            f"DEBUG post_comment_reaction: Data yang diurai - comment_id='{comment_id}', user_nik='{user_nik}', emoji_action='{emoji_action}'")
 
         if not comment_id or not user_nik or not emoji_action:
-            logger.warning(f"post_comment_reaction: Field wajib diisi. comment_id: {comment_id}, user_nik: {user_nik}, emoji_action: {emoji_action}")
+            logger.warning(
+                f"post_comment_reaction: Field wajib diisi. comment_id: {comment_id}, user_nik: {user_nik}, emoji_action: {emoji_action}")
             return JsonResponse({"status": "error", "message": "Field wajib diisi"}, status=400)
 
         # Dapatkan komentar dan pengguna
@@ -718,7 +740,8 @@ async def post_comment_reaction(request):  # Diganti nama dari toggle_comment_re
                         message_msg = "Tidak ada reaksi yang perlu dihapus."
 
                 # Hitung ulang jumlah reaksi untuk komentar ini menggunakan pembantu konsolidasi
-                reaction_data = async_to_sync(_get_entity_reaction_data_sync)(comment_obj, user_nik=user_nik, is_report=False)
+                reaction_data = async_to_sync(_get_entity_reaction_data_sync)(comment_obj, user_nik=user_nik,
+                                                                              is_report=False)
 
                 return {
                     'status_msg': status_msg,

@@ -148,7 +148,8 @@ class DailyReportSummary(models.Model):
 
 
 class ReportComment(models.Model):
-    report = models.ForeignKey(DailyReportSummary, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
+    report = models.ForeignKey(DailyReportSummary, on_delete=models.CASCADE, related_name='comments', null=True,
+                               blank=True)
     user = models.ForeignKey('MasterManpower', on_delete=models.CASCADE, to_field='nrp', related_name='comments_made')
     message = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
@@ -169,8 +170,10 @@ class ReportComment(models.Model):
 
 
 class ReportReaction(models.Model):
-    report = models.ForeignKey(DailyReportSummary, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
-    comment = models.ForeignKey(ReportComment, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
+    report = models.ForeignKey(DailyReportSummary, on_delete=models.CASCADE, related_name='reactions', null=True,
+                               blank=True)
+    comment = models.ForeignKey(ReportComment, on_delete=models.CASCADE, related_name='reactions', null=True,
+                                blank=True)
 
     user = models.ForeignKey(
         MasterManpower,
@@ -184,7 +187,8 @@ class ReportReaction(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=models.Q(report__isnull=False, comment__isnull=True) | models.Q(report__isnull=True, comment__isnull=False),
+                check=models.Q(report__isnull=False, comment__isnull=True) | models.Q(report__isnull=True,
+                                                                                      comment__isnull=False),
                 name='either_report_or_comment_not_null',
             ),
             models.UniqueConstraint(

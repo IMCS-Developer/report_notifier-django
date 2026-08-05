@@ -13,9 +13,18 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def env_bool(name, default='False'):
+    return os.environ.get(name, default).strip().lower() in ('true', '1', 'yes', 'on')
+
+
+def env_list(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,15 +32,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'QWERTYUIOP0858')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in ('true', '1', 'yes', 'on')
+DEBUG = env_bool('DEBUG')
 
-ALLOWED_HOSTS = [
-    '*'
-]
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development' if DEBUG else 'production').strip().lower()
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-development-key-not-for-production'
+    else:
+        raise ImproperlyConfigured(
+            "SECRET_KEY wajib diisi lewat environment saat DEBUG=False."
+        )
+
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS') or ['*']
 
 # Application definition
 
@@ -142,8 +158,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Firebase Cloud Messaging (ported from weight_scale-pyserial's config/settings.py)
-FIREBASE_SERVICE_ACCOUNT_KEY_PATH = "reports/serviceAccountKey.json"
-FCM_PROJECT_ID = "vimcs-notifier-df95e"
+FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.environ.get(
+    'FIREBASE_SERVICE_ACCOUNT_KEY_PATH', 'reports/serviceAccountKey.json'
+)
+FCM_PROJECT_ID = os.environ.get('FCM_PROJECT_ID', 'vimcs-notifier-df95e')
 
 # Internal service-to-service auth (weighing -> report_notifier fire-and-forget HTTP calls)
 INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN')
@@ -151,6 +169,9 @@ INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN')
 # Base URL of the weighing project, used by reports/proxy_views.py to fetch report
 # list/PDF data that only weighing has direct DB access to (WeighingTransaction).
 WEIGHING_BASE_URL = os.environ.get('WEIGHING_BASE_URL', 'http://localhost:8000')
+
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
 
 if DEBUG:
     CHANNEL_LAYERS = {
@@ -163,7 +184,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [(REDIS_HOST, REDIS_PORT)],
             },
         },
     }

@@ -15,7 +15,8 @@ from .models import (
 class FCMDeviceAdmin(admin.ModelAdmin):
     list_display = ('registration_id_short', 'user_nik_display', 'user_name', 'active', 'date_created')
     list_filter = ('active', 'date_created')
-    search_fields = ('registration_id', 'user_nik__nrp', 'user_name',)  # Gunakan 'user_nik__nrp' untuk pencarian via relasi
+    search_fields = ('registration_id', 'user_nik__nrp',
+                     'user_name',)  # Gunakan 'user_nik__nrp' untuk pencarian via relasi
     readonly_fields = ('date_created',)
 
     def registration_id_short(self, obj):
@@ -38,7 +39,8 @@ class MasterManpowerAdmin(admin.ModelAdmin):
     # Metode kustom untuk menampilkan foto profil di list_display
     def pas_foto_display(self, obj):
         if obj.pas_foto:
-            return format_html('<img src="{}" style="max-width: 50px; max-height: 50px; border-radius: 50%;" />', obj.pas_foto.url)
+            return format_html('<img src="{}" style="max-width: 50px; max-height: 50px; border-radius: 50%;" />',
+                               obj.pas_foto.url)
         return "No Photo"
 
     pas_foto_display.short_description = "Pas Foto"
@@ -46,8 +48,9 @@ class MasterManpowerAdmin(admin.ModelAdmin):
 
 @admin.register(DailyReportSummary)
 class DailyReportSummaryAdmin(admin.ModelAdmin):
-    list_display = ('report_date', 'shift', 'delivery_shift', 'today_rom', 'today_jetty', 'author_nrp', 'created_at', 'updated_at', 'encoded_key',
-                    'pdf_file_link')
+    list_display = ('report_date', 'shift', 'delivery_shift', 'today_rom', 'today_jetty', 'author_nrp', 'created_at',
+                    'updated_at',
+                    'encoded_key', 'pdf_file_link')
     list_filter = ('shift', 'report_date', 'author')
     search_fields = ('encoded_key', 'author__nrp', 'author__nama')
     ordering = ('-report_date', 'shift')
@@ -68,7 +71,8 @@ class DailyReportSummaryAdmin(admin.ModelAdmin):
 
     def pdf_file_display(self, obj):  # Untuk menampilkan link PDF di readonly_fields
         if obj.pdf_file:
-            return format_html('<a href="{}" target="_blank">{}</a>', obj.pdf_file.url, obj.pdf_file.name.split('/')[-1])
+            return format_html('<a href="{}" target="_blank">{}</a>', obj.pdf_file.url,
+                               obj.pdf_file.name.split('/')[-1])
         return "No PDF File"
 
     pdf_file_display.short_description = "PDF File"
@@ -95,7 +99,8 @@ class ReportCommentAdmin(admin.ModelAdmin):
     def report_link(self, obj):
         if obj.report:
             return format_html('<a href="{}">{}</a>',
-                               reverse('admin:%s_%s_change' % (obj.report._meta.app_label, obj.report._meta.model_name), args=[obj.report.pk]),
+                               reverse('admin:%s_%s_change' %
+                                       (obj.report._meta.app_label, obj.report._meta.model_name), args=[obj.report.pk]),
                                obj.report.encoded_key)
         return "N/A"
 
@@ -104,9 +109,9 @@ class ReportCommentAdmin(admin.ModelAdmin):
     def parent_comment_link(self, obj):
         if obj.parent_comment:
             return format_html('<a href="{}">#{}</a>',
-                               reverse('admin:%s_%s_change' % (obj.parent_comment._meta.app_label, obj.parent_comment._meta.model_name),
-                                       args=[obj.parent_comment.pk]),
-                               obj.parent_comment.id)
+                               reverse('admin:%s_%s_change' %
+                                       (obj.parent_comment._meta.app_label, obj.parent_comment._meta.model_name),
+                                       args=[obj.parent_comment.pk]), obj.parent_comment.id)
         return "N/A"
 
     parent_comment_link.short_description = "Reply To"
@@ -138,7 +143,8 @@ class ReportReactionAdmin(admin.ModelAdmin):
     def report_link(self, obj):
         if obj.report:
             return format_html('<a href="{}">{}</a>',
-                               reverse('admin:%s_%s_change' % (obj.report._meta.app_label, obj.report._meta.model_name), args=[obj.report.pk]),
+                               reverse('admin:%s_%s_change' % (obj.report._meta.app_label, obj.report._meta.model_name),
+                                       args=[obj.report.pk]),
                                obj.report.encoded_key)
         return "N/A"
 

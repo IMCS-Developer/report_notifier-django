@@ -3,7 +3,8 @@ from django.urls import path
 from reports import social_views, internal_views, proxy_views
 
 urlpatterns = [
-    path('internal/report-summary/upsert/', internal_views.upsert_daily_report_summary, name='upsert_daily_report_summary'),
+    path('internal/report-summary/upsert/', internal_views.upsert_daily_report_summary,
+         name='upsert_daily_report_summary'),
     path('internal/fcm-devices/active/', internal_views.list_active_fcm_devices, name='list_active_fcm_devices'),
 
     path('api/get-reports/', proxy_views.proxy_get_reports, name='proxy_get_reports'),
