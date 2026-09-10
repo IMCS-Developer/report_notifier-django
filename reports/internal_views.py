@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from reports.models import DailyReportSummary, FCMDevice, MasterManpower
+from reports.models import DailyReportSummary, FCMDevice
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,6 @@ def upsert_daily_report_summary(request):
     mtd_jetty = data.get('mtd_jetty')
     last_transaction = data.get('last_transaction')
     delivery_shift = data.get('delivery_shift')
-    author_nrp = data.get('author_nrp')
 
     if not report_date or not shift or today_rom is None or today_jetty is None:
         return JsonResponse({'error': 'report_date, shift, today_rom, today_jetty wajib diisi'}, status=400)
@@ -56,15 +55,7 @@ def upsert_daily_report_summary(request):
     except ValueError:
         return JsonResponse({'error': "report_date harus berformat 'YYYY-MM-DD'"}, status=400)
 
-    author_to_set = None
-    if author_nrp:
-        author_to_set = MasterManpower.objects.filter(nrp=author_nrp).first()
-        if not author_to_set:
-            logger.warning(f"upsert_daily_report_summary: MasterManpower dengan nrp={author_nrp} tidak ditemukan.")
-
     defaults_data = {}
-    if author_to_set:
-        defaults_data['author'] = author_to_set
     if delivery_shift:
         defaults_data['delivery_shift'] = delivery_shift
 
@@ -75,9 +66,6 @@ def upsert_daily_report_summary(request):
     )
 
     fields_to_update = []
-    if not report.author and author_to_set:
-        report.author = author_to_set
-        fields_to_update.append('author')
     if not report.delivery_shift and delivery_shift:
         report.delivery_shift = delivery_shift
         fields_to_update.append('delivery_shift')
@@ -117,6 +105,9 @@ def upsert_daily_report_summary(request):
                 "mtd_jetty": mtd_jetty,
                 "last_transaction": last_transaction,
                 "title": report.title,
+                "user": "System Auto",
+                "user_photo": None,
+                "sender_nik": None,
                 "created": created,
             },
         },

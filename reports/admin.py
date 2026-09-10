@@ -14,10 +14,11 @@ from .models import (
 
 @admin.register(AppRelease)
 class AppReleaseAdmin(admin.ModelAdmin):
-    list_display = ('version', 'build_number', 'mandatory', 'is_active', 'created_at')
+    list_display = ('version', 'build_number', 'size', 'mandatory', 'is_active', 'created_at')
     list_filter = ('is_active', 'mandatory')
     ordering = ('-build_number',)
-    readonly_fields = ('created_at',)
+    readonly_fields = ('version', 'build_number', 'sha256', 'size', 'created_at')
+    fields = ('metadata_file', 'apk_file', 'changelog', 'mandatory', 'is_active', 'version', 'build_number', 'sha256', 'size', 'created_at')
 
 
 @admin.register(FCMDevice)

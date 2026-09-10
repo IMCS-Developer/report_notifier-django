@@ -16,4 +16,6 @@ def app_version(request):
         'apk_url': request.build_absolute_uri(release.apk_file.url),
         'changelog': release.changelog,
         'mandatory': release.mandatory,
+        'sha256': release.sha256,
+        'size': release.size,
     })
