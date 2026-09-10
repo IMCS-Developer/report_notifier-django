@@ -5,6 +5,8 @@ import pytz
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -213,3 +215,41 @@ class ReportReaction(models.Model):
         elif self.comment:
             target = f"on comment {self.comment.id}"
         return f"Reaction '{self.emoji}' {target} by {self.user.nama if self.user and hasattr(self.user, 'nama') else self.user.nrp if self.user else 'Anon'}"
+
+
+class AppRelease(models.Model):
+    version = models.CharField(max_length=20, help_text="Semantic version, e.g. 2.1.0")
+    build_number = models.PositiveIntegerField(help_text="Monotonic build number, matches pubspec '+N'")
+    apk_file = models.FileField(upload_to='apk/')
+    changelog = models.TextField(blank=True, default='')
+    mandatory = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="Newest active release is the one served to clients")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "App Release"
+        verbose_name_plural = "App Releases"
+        ordering = ['-build_number']
+
+    def __str__(self):
+        return f"v{self.version}+{self.build_number}"
+
+
+@receiver(post_save, sender=AppRelease)
+def notify_devices_on_new_release(sender, instance, created, **kwargs):
+    if not created or not instance.is_active:
+        return
+
+    from reports.fcm_client_v1 import send_fcm_notification_v1
+
+    tokens = list(
+        FCMDevice.objects.filter(active=True).values_list('registration_id', flat=True)
+    )
+    if not tokens:
+        return
+
+    send_fcm_notification_v1(
+        tokens,
+        title='App update available',
+        data={'type': 'app_update', 'version': instance.version},
+    )

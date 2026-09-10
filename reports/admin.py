@@ -7,8 +7,17 @@ from .models import (
     MasterManpower,
     DailyReportSummary,
     ReportComment,
-    ReportReaction
+    ReportReaction,
+    AppRelease,
 )
+
+
+@admin.register(AppRelease)
+class AppReleaseAdmin(admin.ModelAdmin):
+    list_display = ('version', 'build_number', 'mandatory', 'is_active', 'created_at')
+    list_filter = ('is_active', 'mandatory')
+    ordering = ('-build_number',)
+    readonly_fields = ('created_at',)
 
 
 @admin.register(FCMDevice)
