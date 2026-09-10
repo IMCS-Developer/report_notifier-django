@@ -40,6 +40,11 @@ def upsert_daily_report_summary(request):
     shift = data.get('shift')
     today_rom = data.get('today_rom')
     today_jetty = data.get('today_jetty')
+    today_rom_ritase = data.get('today_rom_ritase')
+    today_jetty_ritase = data.get('today_jetty_ritase')
+    mtd_rom = data.get('mtd_rom')
+    mtd_jetty = data.get('mtd_jetty')
+    last_transaction = data.get('last_transaction')
     delivery_shift = data.get('delivery_shift')
     author_nrp = data.get('author_nrp')
 
@@ -106,6 +111,11 @@ def upsert_daily_report_summary(request):
                 "delivery_shift": report.delivery_shift,
                 "today_rom": report.today_rom,
                 "today_jetty": report.today_jetty,
+                "today_rom_ritase": today_rom_ritase,
+                "today_jetty_ritase": today_jetty_ritase,
+                "mtd_rom": mtd_rom,
+                "mtd_jetty": mtd_jetty,
+                "last_transaction": last_transaction,
                 "title": report.title,
                 "created": created,
             },
