@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
@@ -91,6 +93,24 @@ def upsert_daily_report_summary(request):
         report.today_rom = rounded_today_rom
         report.today_jetty = rounded_today_jetty
         report.save(update_fields=['today_rom', 'today_jetty', 'updated_at'])
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "reports_feed",
+        {
+            "type": "report_update",
+            "message": {
+                "encoded_key": report.encoded_key,
+                "report_date": report.report_date.strftime('%Y-%m-%d'),
+                "shift": report.shift,
+                "delivery_shift": report.delivery_shift,
+                "today_rom": report.today_rom,
+                "today_jetty": report.today_jetty,
+                "title": report.title,
+                "created": created,
+            },
+        },
+    )
 
     return JsonResponse({'success': True, 'created': created, 'id': report.id})
 
