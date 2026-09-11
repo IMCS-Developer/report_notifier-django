@@ -1,0 +1,9 @@
+asgiref==3.12.1
+channels==4.3.2
+Django>=5.1,<6.0
+djangorestframework==3.18.1
+firebase_admin==7.5.0
+protobuf==7.36.1
+python-dotenv==1.2.3
+pytz==2026.3.post1
+Requests==2.34.2

@@ -70,15 +70,22 @@ class FCMDevice(models.Model):
 
 
 class DailyReportSummary(models.Model):
+    REPORT_TYPE_CHOICES = [
+        ('coal', 'Coal Production'),
+        ('fuel', 'Fuel Management'),
+    ]
+
     SHIFT_CHOICES = [
         ('Day Shift', 'Day Shift'),
         ('Night Shift', 'Night Shift'),
+        ('All Shift', 'All Shift'),
         ('All_Shift', 'All Shift'),
     ]
 
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES, default='coal', db_index=True)
     report_date = models.DateField(db_index=True)
-    shift = models.CharField(max_length=15, choices=SHIFT_CHOICES, db_index=True)
-    delivery_shift = models.CharField(max_length=15, choices=SHIFT_CHOICES, null=True, blank=True,
+    shift = models.CharField(max_length=30, choices=SHIFT_CHOICES, db_index=True)
+    delivery_shift = models.CharField(max_length=30, choices=SHIFT_CHOICES, null=True, blank=True,
                                       help_text="Shift saat laporan ini 'dikirim' atau saat transaksi yang memicu pembuatan laporan dicatat.")
     title = models.CharField(max_length=255, blank=True, null=True)
     notif_text = models.TextField(blank=True, null=True)
@@ -103,7 +110,7 @@ class DailyReportSummary(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('report_date', 'shift')
+        unique_together = ('report_date', 'shift', 'report_type')
         verbose_name = "Daily Report Summary"
         verbose_name_plural = "Daily Report Summaries"
         ordering = ['-report_date', 'shift']
@@ -113,7 +120,10 @@ class DailyReportSummary(models.Model):
         if not self.encoded_key:
             date_part = self.report_date.strftime('%Y%m%d')
             shift_part = self.shift.replace(' ', '_')
-            self.encoded_key = f"{date_part}_{shift_part}"
+            if self.report_type == 'fuel':
+                self.encoded_key = f"fms_daily_fuel_report_{date_part}_{shift_part}"
+            else:
+                self.encoded_key = f"{date_part}_{shift_part}"
 
         if not self.delivery_shift:
             jakarta_tz = pytz.timezone(settings.TIME_ZONE)
@@ -129,6 +139,8 @@ class DailyReportSummary(models.Model):
 
     def get_pdf_filename(self):
         """Mengembalikan nama file PDF yang diharapkan."""
+        if self.report_type == 'fuel':
+            return f"Daily_Fuel_Activity_Report_{self.encoded_key}.pdf"
         return f"Daily_Coal_Activity_Report_{self.encoded_key}.pdf"
 
     def get_pdf_filepath(self):
@@ -144,7 +156,7 @@ class DailyReportSummary(models.Model):
         return f"{settings.MEDIA_URL}report_pdf/{self.get_pdf_filename()}"
 
     def __str__(self):
-        return f"Daily Report: {self.report_date} - {self.shift} (Delivered: {self.delivery_shift or 'N/A'})"
+        return f"Daily Report ({self.report_type}): {self.report_date} - {self.shift} (Delivered: {self.delivery_shift or 'N/A'})"
 
 
 class ReportComment(models.Model):

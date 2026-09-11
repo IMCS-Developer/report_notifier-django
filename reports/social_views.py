@@ -16,6 +16,45 @@ from channels.db import database_sync_to_async
 from asgiref.sync import async_to_sync, sync_to_async
 
 
+def _get_or_create_report_summary_sync(report_id):
+    """
+    Mengambil DailyReportSummary berdasarkan encoded_key.
+    Jika belum ada (misal laporan Fuel dari FMS), auto-create summary agar
+    interaksi like dan comment dapat langsung disimpan tanpa error 404.
+    """
+    if not report_id:
+        raise DailyReportSummary.DoesNotExist("report_id kosong")
+
+    summary = DailyReportSummary.objects.filter(encoded_key=report_id).first()
+    if summary:
+        return summary
+
+    import re
+    from datetime import date
+    # Format fuel: fms_daily_fuel_report_YYYYMMDD_Shift (e.g. 20260909_Day_Shift)
+    # Format coal: YYYYMMDD_Shift
+    m = re.search(r'(\d{4})(\d{2})(\d{2})_([A-Za-z0-9_]+)$', report_id)
+    if m:
+        year, month, day, shift_slug = m.groups()
+        rep_date = date(int(year), int(month), int(day))
+        rep_shift = shift_slug.replace('_', ' ')
+        is_fuel = 'fms' in report_id.lower() or 'fuel' in report_id.lower()
+        rep_type = 'fuel' if is_fuel else 'coal'
+        title = 'Daily Fuel Activity Report' if is_fuel else 'Daily Coal Activity Report'
+        summary, _ = DailyReportSummary.objects.get_or_create(
+            encoded_key=report_id,
+            defaults={
+                'report_date': rep_date,
+                'shift': rep_shift,
+                'report_type': rep_type,
+                'title': title,
+            }
+        )
+        return summary
+
+    return DailyReportSummary.objects.get(encoded_key=report_id)
+
+
 @csrf_exempt
 @require_GET
 async def get_report_reaction_status(request):
@@ -27,7 +66,7 @@ async def get_report_reaction_status(request):
         return JsonResponse({'status': 'error', 'message': 'report_id atau nik tidak lengkap'}, status=400)
 
     try:
-        report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
+        report_summary = await sync_to_async(_get_or_create_report_summary_sync)(report_id)
 
         results = await _get_entity_reaction_data_sync(report_summary, user_nik=user_nik, is_report=True)
 
@@ -75,7 +114,7 @@ async def get_report_reaction_users(request):
         return JsonResponse({'status': 'error', 'message': 'Tipe reaksi tidak valid'}, status=400)
 
     try:
-        report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
+        report_summary = await sync_to_async(_get_or_create_report_summary_sync)(report_id)
 
         reactions_queryset = ReportReaction.objects.filter(
             report=report_summary,
@@ -129,7 +168,7 @@ async def post_comment(request):
 
         # Dapatkan laporan dan pengguna dalam satu panggilan asinkron jika tidak ada parent_comment_id
         # Atau pisahkan jika diperlukan
-        report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
+        report_summary = await sync_to_async(_get_or_create_report_summary_sync)(report_id)
         db_manpower_user = await sync_to_async(MasterManpower.objects.get)(nrp=user_nik)
 
         parent_comment = None
@@ -320,7 +359,7 @@ async def get_comments(request):
         return JsonResponse({'status': 'error', 'message': 'report_id tidak lengkap'}, status=400)
 
     try:
-        report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
+        report_summary = await sync_to_async(_get_or_create_report_summary_sync)(report_id)
 
         # Mengambil komentar utama (parent_comment is null) dan prefetch balasan serta pengguna
         comments_queryset = ReportComment.objects.filter(
@@ -542,7 +581,7 @@ async def post_report_reaction(request):
             return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
 
         # Dapatkan laporan dan pengguna
-        report_summary = await sync_to_async(DailyReportSummary.objects.get)(encoded_key=report_id)
+        report_summary = await sync_to_async(_get_or_create_report_summary_sync)(report_id)
         db_manpower_user = await sync_to_async(MasterManpower.objects.get)(nrp=user_nik)
 
         # Tentukan target emoji dari action

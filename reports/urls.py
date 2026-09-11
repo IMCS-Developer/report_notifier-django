@@ -9,6 +9,9 @@ urlpatterns = [
 
     path('api/get-reports/', proxy_views.proxy_get_reports, name='proxy_get_reports'),
     path('api/generate_pdf_report/', proxy_views.proxy_generate_pdf_report, name='proxy_generate_pdf_report'),
+    path('api/fuel-report/', proxy_views.proxy_fuel_report, name='proxy_fuel_report_root'),
+    path('api/fuel-report/<path:subpath>/', proxy_views.proxy_fuel_report, name='proxy_fuel_report_subpath'),
+    path('api/fuel-report/<path:subpath>', proxy_views.proxy_fuel_report, name='proxy_fuel_report_subpath_noslash'),
 
     path('api/register-fcm-token/', social_views.register_fcm_token, name='register_fcm_token'),
     path('api/get-report-reaction-status/', social_views.get_report_reaction_status, name='get_report_reaction_status'),

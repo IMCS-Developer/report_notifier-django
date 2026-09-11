@@ -33,7 +33,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_bool('DEBUG')
+DEBUG = False
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development' if DEBUG else 'production').strip().lower()
 
@@ -47,7 +47,7 @@ if not SECRET_KEY:
             "SECRET_KEY wajib diisi lewat environment saat DEBUG=False."
         )
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS') or ['*']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -169,6 +169,7 @@ INTERNAL_API_TOKEN = os.environ.get('INTERNAL_API_TOKEN')
 # Base URL of the weighing project, used by reports/proxy_views.py to fetch report
 # list/PDF data that only weighing has direct DB access to (WeighingTransaction).
 WEIGHING_BASE_URL = os.environ.get('WEIGHING_BASE_URL', 'http://localhost:8000')
+FMS_BASE_URL = os.environ.get('FMS_BASE_URL', 'http://localhost:8000')
 
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
@@ -184,7 +185,9 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [(REDIS_HOST, REDIS_PORT)],
+                "hosts": [f"redis://{REDIS_HOST}:{REDIS_PORT}/0?protocol=2"],
             },
         },
     }
+
+CORS_ALLOWED_ORIGINS=True
