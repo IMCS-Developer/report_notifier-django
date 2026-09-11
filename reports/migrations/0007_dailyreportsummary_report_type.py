@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('reports', '0004_sync_model_meta_options'),
+        ('reports', '0006_apprelease_metadata_upload'),
     ]
 
     operations = [

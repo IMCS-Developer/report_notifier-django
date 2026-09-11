@@ -33,7 +33,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = env_bool('DEBUG')
 
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development' if DEBUG else 'production').strip().lower()
 
@@ -47,7 +47,7 @@ if not SECRET_KEY:
             "SECRET_KEY wajib diisi lewat environment saat DEBUG=False."
         )
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS') or ['*']
 
 # Application definition
 
@@ -151,6 +151,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

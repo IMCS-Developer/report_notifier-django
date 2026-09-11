@@ -7,8 +7,18 @@ from .models import (
     MasterManpower,
     DailyReportSummary,
     ReportComment,
-    ReportReaction
+    ReportReaction,
+    AppRelease,
 )
+
+
+@admin.register(AppRelease)
+class AppReleaseAdmin(admin.ModelAdmin):
+    list_display = ('version', 'build_number', 'size', 'mandatory', 'is_active', 'created_at')
+    list_filter = ('is_active', 'mandatory')
+    ordering = ('-build_number',)
+    readonly_fields = ('version', 'build_number', 'sha256', 'size', 'created_at')
+    fields = ('metadata_file', 'apk_file', 'changelog', 'mandatory', 'is_active', 'version', 'build_number', 'sha256', 'size', 'created_at')
 
 
 @admin.register(FCMDevice)
@@ -48,10 +58,10 @@ class MasterManpowerAdmin(admin.ModelAdmin):
 
 @admin.register(DailyReportSummary)
 class DailyReportSummaryAdmin(admin.ModelAdmin):
-    list_display = ('report_date', 'shift', 'delivery_shift', 'today_rom', 'today_jetty', 'author_nrp', 'created_at',
+    list_display = ('report_date', 'report_type', 'shift', 'delivery_shift', 'today_rom', 'today_jetty', 'author_nrp', 'created_at',
                     'updated_at',
                     'encoded_key', 'pdf_file_link')
-    list_filter = ('shift', 'report_date', 'author')
+    list_filter = ('report_type', 'shift', 'report_date', 'author')
     search_fields = ('encoded_key', 'author__nrp', 'author__nama')
     ordering = ('-report_date', 'shift')
     readonly_fields = ('encoded_key', 'created_at', 'updated_at', 'today_rom', 'today_jetty', 'pdf_file_display')

@@ -1,11 +1,13 @@
 from django.urls import path
 
-from reports import social_views, internal_views, proxy_views
+from reports import social_views, internal_views, proxy_views, app_release_views
 
 urlpatterns = [
     path('internal/report-summary/upsert/', internal_views.upsert_daily_report_summary,
          name='upsert_daily_report_summary'),
     path('internal/fcm-devices/active/', internal_views.list_active_fcm_devices, name='list_active_fcm_devices'),
+
+    path('api/app-version/', app_release_views.app_version, name='app_version'),
 
     path('api/get-reports/', proxy_views.proxy_get_reports, name='proxy_get_reports'),
     path('api/generate_pdf_report/', proxy_views.proxy_generate_pdf_report, name='proxy_generate_pdf_report'),

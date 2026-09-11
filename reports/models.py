@@ -1,11 +1,19 @@
+import hashlib
+import json
+import logging
 import os
 from datetime import datetime
 
 import pytz
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 class MasterManpower(models.Model):
@@ -225,3 +233,95 @@ class ReportReaction(models.Model):
         elif self.comment:
             target = f"on comment {self.comment.id}"
         return f"Reaction '{self.emoji}' {target} by {self.user.nama if self.user and hasattr(self.user, 'nama') else self.user.nrp if self.user else 'Anon'}"
+
+
+class AppRelease(models.Model):
+    metadata_file = models.FileField(
+        upload_to='apk/metadata/',
+        help_text="Gradle output-metadata.json; version and build_number are read from it",
+    )
+    apk_file = models.FileField(upload_to='apk/')
+    version = models.CharField(max_length=20, blank=True, default='', help_text="Auto-filled from output-metadata.json versionName")
+    build_number = models.PositiveIntegerField(null=True, blank=True, help_text="Auto-filled from output-metadata.json versionCode")
+    changelog = models.TextField(blank=True, default='')
+    mandatory = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="Newest active release is the one served to clients")
+    sha256 = models.CharField(max_length=64, blank=True, default='', help_text="Hex SHA-256 of apk_file, computed on save")
+    size = models.PositiveBigIntegerField(default=0, help_text="apk_file size in bytes, computed on save")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "App Release"
+        verbose_name_plural = "App Releases"
+        ordering = ['-build_number']
+
+    def __str__(self):
+        return f"v{self.version or '?'}+{self.build_number or '?'}"
+
+    def save(self, *args, **kwargs):
+        if self.metadata_file:
+            self._apply_output_metadata()
+        if self.apk_file:
+            self._apply_apk_checksum()
+        super().save(*args, **kwargs)
+
+    def _apply_output_metadata(self):
+        self.metadata_file.open('rb')
+        try:
+            raw = self.metadata_file.read()
+        finally:
+            self.metadata_file.seek(0)
+
+        try:
+            document = json.loads(raw)
+            element = document['elements'][0]
+            version_name = str(element['versionName'])
+            version_code = int(element['versionCode'])
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ValidationError(f"Invalid output-metadata.json: {exc}")
+
+        self.version = version_name
+        self.build_number = version_code
+
+        expected_output = element.get('outputFile')
+        if expected_output and self.apk_file:
+            uploaded_name = os.path.basename(self.apk_file.name)
+            if uploaded_name != expected_output:
+                logger.warning(
+                    "AppRelease APK name '%s' does not match output-metadata.json outputFile '%s'",
+                    uploaded_name,
+                    expected_output,
+                )
+
+    def _apply_apk_checksum(self):
+        digest = hashlib.sha256()
+        total = 0
+        self.apk_file.open('rb')
+        try:
+            for chunk in self.apk_file.chunks():
+                digest.update(chunk)
+                total += len(chunk)
+        finally:
+            self.apk_file.seek(0)
+        self.sha256 = digest.hexdigest()
+        self.size = total
+
+
+@receiver(post_save, sender=AppRelease)
+def notify_devices_on_new_release(sender, instance, created, **kwargs):
+    if not created or not instance.is_active:
+        return
+
+    from reports.fcm_client_v1 import send_fcm_notification_v1
+
+    tokens = list(
+        FCMDevice.objects.filter(active=True).values_list('registration_id', flat=True)
+    )
+    if not tokens:
+        return
+
+    send_fcm_notification_v1(
+        tokens,
+        title='App update available',
+        data={'type': 'app_update', 'version': instance.version},
+    )
