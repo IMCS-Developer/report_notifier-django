@@ -1,3 +1,11 @@
+"""
+WebSocket consumer for real-time report notifications.
+
+Joins every connection to a shared "reports_feed" channel group and
+relays report/comment/reaction update events pushed by the group-send
+calls elsewhere in the app to connected clients.
+"""
+
 import json
 from urllib.parse import parse_qs
 

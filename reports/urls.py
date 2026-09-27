@@ -1,3 +1,11 @@
+"""
+URL routing for the reports app's HTTP API.
+
+Wires up internal service endpoints, the app-version check, the
+weighing-service report/PDF proxy, and the social feature endpoints
+(comments, reactions, FCM token registration).
+"""
+
 from django.urls import path
 
 from reports import social_views, internal_views, proxy_views, app_release_views

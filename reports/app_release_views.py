@@ -1,3 +1,10 @@
+"""
+API view exposing the latest active mobile app release.
+
+Provides a single GET endpoint used by the Flutter client to check for
+available app updates (version, APK download URL, changelog, checksum).
+"""
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 

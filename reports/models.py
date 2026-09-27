@@ -1,3 +1,14 @@
+"""
+Database models for the reports app.
+
+Defines MasterManpower (employee master data linked to Django users),
+FCMDevice (push notification registrations), DailyReportSummary (the
+daily coal activity report with its generated PDF), ReportComment and
+ReportReaction (social interactions on reports/comments), and
+AppRelease (mobile app version metadata that triggers an update push
+notification via a post_save signal).
+"""
+
 import hashlib
 import json
 import logging

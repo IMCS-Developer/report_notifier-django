@@ -23,6 +23,7 @@ from reports import auth_views as reports_auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/login/', reports_auth_views.login_api, name='login_api'),
+    path('api/auth/set-pin/', reports_auth_views.set_pin, name='set_pin'),
     path('', include('reports.urls')),
 ]
 

@@ -10,6 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+"""
+Django settings for the report_notifier project.
+
+Configures installed apps, middleware, the PostgreSQL database, ASGI/WSGI
+entry points, Django Channels (in-memory or Redis-backed channel layer),
+and integration settings for Firebase Cloud Messaging and the weighing
+service's internal API.
+"""
+
 import os
 from pathlib import Path
 

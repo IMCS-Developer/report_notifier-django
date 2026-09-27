@@ -1,3 +1,11 @@
+"""
+Custom Django authentication backend based on employee NRP.
+
+Authenticates users against MasterManpower.nrp instead of the default
+username, lazily creating/linking a Django User for manpower records
+that do not yet have one.
+"""
+
 import traceback
 
 from django.contrib.auth.backends import BaseBackend

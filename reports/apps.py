@@ -1,3 +1,10 @@
+"""
+App configuration for the reports Django app.
+
+Initializes the Firebase Admin SDK on app startup so push notification
+features are ready before any request or signal handler needs them.
+"""
+
 from django.apps import AppConfig
 
 

@@ -1,3 +1,12 @@
+"""
+Django admin configuration for the reports app.
+
+Registers admin views for AppRelease, FCMDevice, MasterManpower,
+DailyReportSummary, ReportComment, and ReportReaction, with custom
+list displays, search fields, and read-only computed columns (e.g.
+PDF links, cross-referenced NRP/user names).
+"""
+
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html

@@ -1,3 +1,11 @@
+"""
+Firebase Cloud Messaging (HTTP v1 API) client.
+
+Obtains OAuth access tokens from the Firebase service account and sends
+data-only FCM push messages to one or more device registration tokens,
+with retry handling and per-token success/failure reporting.
+"""
+
 import json
 import time
 import traceback
