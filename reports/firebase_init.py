@@ -1,3 +1,11 @@
+"""
+Firebase Admin SDK bootstrap helper.
+
+Initializes the firebase_admin app exactly once, using the service
+account key file path configured in Django settings, and is called from
+ReportsConfig.ready() at application startup.
+"""
+
 import os  # for path manipulation
 
 import firebase_admin

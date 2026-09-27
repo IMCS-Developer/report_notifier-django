@@ -1,3 +1,12 @@
+"""
+Internal service-to-service API views.
+
+Endpoints called only by the weighing project (protected by a shared
+X-Internal-Token header) to upsert daily report summaries and to list
+active FCM device tokens; upserts also broadcast a report_update event
+over the notifications WebSocket group.
+"""
+
 import hmac
 import json
 import logging

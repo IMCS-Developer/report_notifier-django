@@ -1,3 +1,11 @@
+"""
+Async-aware replacements for common Django view decorators.
+
+Provides require_http_methods (plus require_GET/require_POST) and
+csrf_exempt implementations that work transparently with both sync and
+async view functions, unlike Django's built-in versions at this point.
+"""
+
 import asyncio
 from functools import wraps
 

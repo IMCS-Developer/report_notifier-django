@@ -1,3 +1,12 @@
+"""
+Proxy views forwarding report data/PDF requests to the weighing service.
+
+The weighing project owns WeighingTransaction data and report
+generation; these views proxy its get-reports and generate_pdf_report
+endpoints and enrich the report list with local like/dislike/love and
+comment counts stored in this app's database.
+"""
+
 import requests
 from django.conf import settings
 from django.db.models import Count

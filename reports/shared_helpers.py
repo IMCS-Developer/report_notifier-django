@@ -1,3 +1,11 @@
+"""
+Shared async helper functions used by the social views.
+
+Wraps synchronous ORM access (fetching a user's profile photo URL and
+computing like/dislike/love/comment counts plus the current user's
+reaction) as async-safe functions via sync_to_async.
+"""
+
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,3 +1,12 @@
+"""
+Async API views for report/comment social features.
+
+Handles FCM device token registration, report and comment reactions
+(like/dislike/love), comment CRUD (post/update/delete/list), and
+reaction-user listings, broadcasting updates to connected clients over
+the "reports_feed" Channels group as they occur.
+"""
+
 import json
 import logging
 
